@@ -3,7 +3,7 @@ defmodule Waje.Wiki do
   defp make_api_request(parsed_uri, params) do
     api_params = URI.encode_query(Dict.merge(params, %{ "format" => "json" }))
     api_uri = "#{parsed_uri.scheme}://#{parsed_uri.authority}/w/api.php?#{api_params}"
-    results = Waje.Vault.fetch(api_uri).body |> :jsx.decode
+    results = Waje.Vault.fetch(api_uri) |> :jsx.decode
 
     if Dict.has_key?(results, "continue") do
       [results | make_api_request(parsed_uri, Dict.merge(params, results["continue"]))]
