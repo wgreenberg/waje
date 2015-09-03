@@ -1,17 +1,4 @@
 defmodule Waje.Wiki do
-  use GenServer
-
-  def start_link() do
-    GenServer.start_link(__MODULE__, :ok, [name: :wiki])
-  end
-
-  def init(:ok) do
-    {:ok, nil}
-  end
-
-  def fetch_asset(parsed_uri) do
-    GenServer.call(:wiki, {:fetch, parsed_uri})
-  end
 
   defp make_api_request(parsed_uri, params) do
     api_params = URI.encode_query(Dict.merge(params, %{ "format" => "json" }))
@@ -51,17 +38,14 @@ defmodule Waje.Wiki do
     results |> Enum.map(fn(r) -> r["query"]["categorymembers"] end) |> Enum.concat
   end
 
-  def handle_call({:fetch, parsed_uri}, _from, state) do
+  def fetch_asset(parsed_uri) do
     "/wiki/" <> article_id = parsed_uri.path
 
-    contents =
-      case article_id do
-        # XXX: language codes?
-        "Category:" <> _category -> fetch_category(article_id, parsed_uri)
-        _ -> fetch_article(article_id, parsed_uri)
-      end
-
-    {:reply, contents, state}
+    case article_id do
+      # XXX: language codes?
+      "Category:" <> _category -> fetch_category(article_id, parsed_uri)
+      _ -> fetch_article(article_id, parsed_uri)
+    end
   end
 
 end
