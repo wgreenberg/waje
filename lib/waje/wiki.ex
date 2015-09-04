@@ -12,13 +12,6 @@ defmodule Waje.Wiki do
     end
   end
 
-  defp fetch_by_title(parsed_uri, title) do
-    title_url = String.replace(title, " ", "_")
-    title_url = URI.encode_www_form(title_url)
-    uri = "#{parsed_uri.scheme}://#{parsed_uri.authority}/wiki/#{title_url}"
-    Waje.Fetcher.fetch_asset(uri)
-  end
-
   defp fetch_article(article_id, parsed_uri) do
     [contents] = make_api_request(parsed_uri, %{ "action" => "query",
                                                  "titles" => article_id,
@@ -46,26 +39,12 @@ defmodule Waje.Wiki do
       Enum.map(fn(r) -> r["imageinfo"] end) |>
       Enum.concat |>
       Enum.filter(fn(r) -> !r["missing"] end)
-  end
 
-  defp fetch_category(article_id, parsed_uri) do
-    results = make_api_request(parsed_uri, %{ "action" => "query",
-                                              "cmtitle" => article_id,
-                                              "list" => "categorymembers" })
-    results = results |> Enum.map(fn(r) -> r["query"]["categorymembers"] end) |> Enum.concat
 
-    titles = results |> Enum.map(fn(r) -> r["title"] end)
-    Enum.each(titles, fn(r) -> fetch_by_title(parsed_uri, r) end)
   end
 
   def fetch_asset(parsed_uri) do
     "/wiki/" <> article_id = parsed_uri.path
-
-    case article_id do
-      # XXX: language codes?
-      "Category:" <> _category -> fetch_category(article_id, parsed_uri)
-      _ -> fetch_article(article_id, parsed_uri)
-    end
+    fetch_article(article_id, parsed_uri)
   end
-
 end

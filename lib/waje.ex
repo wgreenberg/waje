@@ -6,7 +6,7 @@ defmodule Waje do
 
     GenEvent.add_handler(:fetcher_events, Waje.Fetcher.Watcher, self())
 
-    url = "https://en.wikipedia.org/wiki/Category:Cats"
+    url = "https://en.wikipedia.org/wiki/Cats"
     Waje.Fetcher.fetch_asset(url)
   end
 
