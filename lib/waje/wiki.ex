@@ -12,6 +12,13 @@ defmodule Waje.Wiki do
     end
   end
 
+  defp fetch_by_title(parsed_uri, title) do
+    title_url = String.replace(title, " ", "_")
+    title_url = URI.encode_www_form(title_url)
+    uri = "#{parsed_uri.scheme}://#{parsed_uri.authority}/wiki/#{title_url}"
+    Waje.Fetcher.fetch_asset(uri)
+  end
+
   defp fetch_article(article_id, parsed_uri) do
     [contents] = make_api_request(parsed_uri, %{ "action" => "query",
                                                  "titles" => article_id,
@@ -28,14 +35,27 @@ defmodule Waje.Wiki do
                                                  "generator" => "images",
                                                  "gimlimit" => "max",
                                                  "iiprop" => "url|dimensions|extmetadata|user",
+                                                 "iiurlwidth" => 800,
                                                  "prop" => "imageinfo", })
+
+    images = image_info |>
+      Enum.filter(fn(r) -> r["query"] end) |>
+      Enum.map(fn(r) -> r["query"]["pages"] end) |>
+      Enum.map(fn(r) -> Dict.values(r) end) |>
+      Enum.concat |>
+      Enum.map(fn(r) -> r["imageinfo"] end) |>
+      Enum.concat |>
+      Enum.filter(fn(r) -> !r["missing"] end)
   end
 
   defp fetch_category(article_id, parsed_uri) do
     results = make_api_request(parsed_uri, %{ "action" => "query",
                                               "cmtitle" => article_id,
                                               "list" => "categorymembers" })
-    results |> Enum.map(fn(r) -> r["query"]["categorymembers"] end) |> Enum.concat
+    results = results |> Enum.map(fn(r) -> r["query"]["categorymembers"] end) |> Enum.concat
+
+    titles = results |> Enum.map(fn(r) -> r["title"] end)
+    Enum.each(titles, fn(r) -> fetch_by_title(parsed_uri, r) end)
   end
 
   def fetch_asset(parsed_uri) do
