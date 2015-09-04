@@ -12,7 +12,7 @@ defmodule Waje.Wiki do
     end
   end
 
-  defp fetch_article(article_id, parsed_uri) do
+  defp fetch_article(article_id, parsed_uri, asset_id) do
     [contents] = make_api_request(parsed_uri, %{ "action" => "query",
                                                  "titles" => article_id,
                                                  "redirects" => "",
@@ -27,7 +27,7 @@ defmodule Waje.Wiki do
                                                  "redirects" => "",
                                                  "generator" => "images",
                                                  "gimlimit" => "max",
-                                                 "iiprop" => "url|dimensions|extmetadata|user",
+                                                 "iiprop" => "url|dimensions|extmetadata|user|mediatype",
                                                  "iiurlwidth" => 800,
                                                  "prop" => "imageinfo", })
 
@@ -38,13 +38,21 @@ defmodule Waje.Wiki do
       Enum.concat |>
       Enum.map(fn(r) -> r["imageinfo"] end) |>
       Enum.concat |>
-      Enum.filter(fn(r) -> !r["missing"] end)
+      Enum.filter(fn(r) -> !r["missing"] end) |>
+      Enum.filter(fn(r) -> r["mediatype"] != "AUDIO" and r["mediatype"] != "VIDEO" end)
 
-
+    GenEvent.notify(:fetcher_events, {:num_assets, asset_id, length(images)})
+    Enum.map(images, fn(i) -> fetch_image(i, asset_id) end)
   end
 
-  def fetch_asset(parsed_uri) do
+  defp fetch_image(image_dict, asset_id) do
+    image_url = image_dict["url"]
+    image_binary = Waje.Vault.fetch(image_url)
+    GenEvent.notify(:fetcher_events, {:fetch_progress, asset_id, image_url})
+  end
+
+  def fetch_asset(parsed_uri, asset_id) do
     "/wiki/" <> article_id = parsed_uri.path
-    fetch_article(article_id, parsed_uri)
+    fetch_article(article_id, parsed_uri, asset_id)
   end
 end

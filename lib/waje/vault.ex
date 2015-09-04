@@ -6,7 +6,7 @@ defmodule Waje.Vault do
   end
 
   defp fetch_url(url) do
-    contents = HTTPotion.get(url).body
+    contents = HTTPotion.get(url, [timeout: 10000]).body
     GenServer.call(:vault, {:insert, url, contents})
     contents
   end

@@ -26,15 +26,17 @@ defmodule Waje.Fetcher.Asset do
   end
 
   def handle_cast({:start_fetch, url}, state) do
-    GenEvent.notify(:fetcher_events, {:fetch_start, url})
+    asset_id = url
+
+    GenEvent.notify(:fetcher_events, {:fetch_start, asset_id})
 
     parsed_uri = URI.parse(url)
     contents =
       case String.split(parsed_uri.authority, ".") do
-        [_, "wikipedia", "org"] -> Waje.Wiki.fetch_asset(parsed_uri)
+        [_, "wikipedia", "org"] -> Waje.Wiki.fetch_asset(parsed_uri, asset_id)
       end
 
-    GenEvent.notify(:fetcher_events, {:fetch_done, url})
+    GenEvent.notify(:fetcher_events, {:fetch_done, asset_id})
 
     {:noreply, state}
   end
