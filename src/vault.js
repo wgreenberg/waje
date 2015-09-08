@@ -22,7 +22,7 @@ Vault.prototype = {
             return request.getAsync(url).spread(function(response, body) {
                 this._manifest[url] = this._getPath(url);
                 saveManifest(this._manifest);
-                fs.writeFileSync(this._manifest[url], data);
+                fs.writeFileSync(this._manifest[url], body);
                 return data;
             }.bind(this));
         }

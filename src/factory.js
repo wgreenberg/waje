@@ -1,3 +1,4 @@
+var EventEmitter = require('events').EventEmitter;
 var Vault = require('./vault.js');
 var WikipediaCSM = require('./csm/wikipedia.js');
 
@@ -5,11 +6,14 @@ function Factory () {
     this._vault = new Vault('vault');
     this._q = {};
     this._currResult = 0;
+    this.events = new EventEmitter();
 }
 
 Factory.prototype = {
     fetch: function (payload) {
         var result;
+
+        this.events.emit('fetching', payload);
 
         switch (payload.source) {
             case 'wikipedia':
@@ -23,14 +27,14 @@ Factory.prototype = {
         this._q[idx] = result;
 
         result.on('progress', function (numFinished) {
-            console.log('Progress:', numFinished);
+            this.events.emit('progress', payload, numFinished);
         }.bind(this));
         result.on('error', function (reason) {
-            console.error('Error: ', reason);
+            this.events.emit('error', payload, reason);
             delete this._q[idx];
         }.bind(this));
         result.on('done', function () {
-            console.log('Finished: ');
+            this.events.emit('done', payload);
             delete this._q[idx];
         }.bind(this));
     },
