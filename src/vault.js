@@ -1,6 +1,7 @@
+
 var fs = require('fs');
-var request = require('request');
 var Promise = require('bluebird');
+var request = Promise.promisifyAll(require('request'));
 
 var MANIFEST = 'vault/manifest.json';
 
@@ -14,26 +15,17 @@ Vault.prototype = {
         return this._dir + '/' + url.replace(/\//g, ':');
     },
     getThing: function (url) {
-        return new Promise.Promise(function (resolve, reject) {
-            if (this._manifest.hasOwnProperty(url)) {
-                var data = fs.readFileSync(this._manifest[url], { encoding: 'utf8' })
-                resolve(data);
-            } else {
-                var data = request.get(url, function (err, response, data) {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        console.log('fffff');
-                        try {
-                        this._manifest[url] = this._getPath(url);
-                        saveManifest(this._manifest);
-                        fs.writeFileSync(this._manifest[url], data);
-                        resolve(data);
-                        } catch (e) { console.log('fuck') }
-                    }
-                }.bind(this));
-            }
-        }.bind(this));
+        if (this._manifest.hasOwnProperty(url)) {
+            var data = fs.readFileSync(this._manifest[url], { encoding: 'utf8' });
+            return Promise.resolve(data);
+        } else {
+            return request.getAsync(url).spread(function(response, body) {
+                this._manifest[url] = this._getPath(url);
+                saveManifest(this._manifest);
+                fs.writeFileSync(this._manifest[url], data);
+                return data;
+            }.bind(this));
+        }
     },
 };
 
