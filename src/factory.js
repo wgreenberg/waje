@@ -18,6 +18,9 @@ Factory.prototype = {
             default:
                 throw 'wtf is ' + payload.source;
         }
+        result.on('progress', function (numFinished) {
+            console.log('Progress:', numFinished);
+        });
         result.on('error', function (reason) {
             console.error('Error: ', result.url, reason);
             delete this._q[this._currResult];

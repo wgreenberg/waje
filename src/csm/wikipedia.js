@@ -55,6 +55,35 @@ function getApiUrl (url, args) {
     });
 }
 
+function getImageUrls (imageMetadata) {
+    return imageMetadata
+    .then(JSON.parse)
+    .then(function (imageData) {
+        return imageData['query']['pages'];
+    })
+    .then(function (images) {
+        return Object.keys(images).map(function (key) {
+            return images[key];
+        });
+    })
+    .then(function (images) {
+        return images.filter(function (image) {
+            return image.hasOwnProperty('imageinfo')
+        });
+    })
+    .then(function (images) {
+        return images.filter(function (image) {
+            var imageinfo = image.imageinfo[0];
+            return imageinfo.mediatype !== 'AUDIO' && imageinfo.mediatype !== 'VIDEO';
+        });
+    })
+    .then(function (images) {
+        return images.map(function (image) {
+            return image.imageinfo[0].url;
+        });
+    });
+}
+
 module.exports = {
     fetch: function (payload, vault) {
         var emitter = new EventEmitter();
@@ -62,13 +91,26 @@ module.exports = {
         var parsedUrl = Url.parse(payload.url);
 
         var parsedHtml = getParsedHtml(parsedUrl, vault);
-        var imageInfo = getImageInfo(parsedUrl, vault);
+        var imageMetadata = getImageInfo(parsedUrl, vault);
         var articleMetadata = getArticleMetadata(parsedUrl, vault);
+
+        var imageData = getImageUrls(imageMetadata)
+        .then(function (imageUrls) {
+            var numFinished = 0;
+            return Promise.all(imageUrls.map(function (imageUrl) {
+                return vault.getThing(imageUrl)
+                .then(function () {
+                    emitter.emit('progress', numFinished);
+                    numFinished++;
+                });
+            }));
+        });
 
         Promise.all([
             parsedHtml,
-            imageInfo,
+            imageMetadata,
             articleMetadata,
+            imageData,
         ]).then(function (datums) {
             emitter.emit('done');
         }, function (err) {
