@@ -21,6 +21,10 @@ Factory.prototype = {
 
         var idx = this._currResult++;
         this._q[idx] = result;
+
+        result.on('progress', function (numFinished) {
+            console.log('Progress:', numFinished);
+        }.bind(this));
         result.on('error', function (reason) {
             console.error('Error: ', reason);
             delete this._q[idx];
