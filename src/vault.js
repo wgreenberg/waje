@@ -37,7 +37,6 @@ function loadManifest () {
 }
 
 function saveManifest (newManifest) {
-    console.log(JSON.stringify(newManifest, null, 2));
     return fs.writeFileSync(MANIFEST, JSON.stringify(newManifest, null, 2), { encoding: 'utf8' });
 }
 
