@@ -7,21 +7,35 @@
         return ws;
     }
 
+    var dlog_ = document.querySelector('#log');
+    function dlog(S) {
+        dlog_.textContent += S + '\n\n';
+    }
+    function jlog(j) {
+        dlog(JSON.stringify(j, null, 2));
+    }
+
     var control = newSocket('/control/');
     control.onmessage = function(event) {
         var msg = JSON.parse(event.data);
-        console.log(JSON.stringify(msg, null, 2));
+        jlog(['ws recv', msg]);
     };
 
     function sendmsg(msg) {
+        jlog(['ws send', msg]);
         control.send(JSON.stringify(msg, null, 2));
     }
-    setTimeout(function() {
-        console.log("XXX");
+    function fetch(url) {
+        jlog(['ui fetch', url]);
         sendmsg({ type: 'fetch', payload: {
-            url:'https://en.wikipedia.org/wiki/Cat',
+            url: url,
             source:'wikipedia',
         }});
-    }, 1000);
+    }
+
+    document.querySelector('#submit').onclick = function() {
+        var url = document.querySelector('#article_id').value;
+        fetch(url);
+    };
 
 })(window);
