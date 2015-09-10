@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "bluebird": "*"
+    "bluebird": "*",
+    "ws": "^0.8.0"
   },
   "author": "",
   "license": "ISC"
