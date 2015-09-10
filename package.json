@@ -9,7 +9,10 @@
   "dependencies": {
     "bluebird": "*",
     "request": "^2.61.0",
-    "ws": "^0.8.0"
+    "ws": "^0.8.0",
+    "node-uuid": "^1.4.3",
+    "sequelize": "^3.8.0",
+    "sqlite3": "^3.1.0"
   },
   "author": "",
   "license": "ISC"

@@ -1,6 +1,7 @@
 var Promise = require('bluebird');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
+var uuid = require('node-uuid');
 
 // runner :: Job -> Promise(Completed Job)
 function Job (runner) {
@@ -8,6 +9,7 @@ function Job (runner) {
     EventEmitter.call(this);
     this._runner = runner || Promise.resolve;
     this._started = false;
+    this.id = uuid.v1();
 }
 
 util.inherits(Job, EventEmitter);
