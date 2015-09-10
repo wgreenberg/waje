@@ -14,24 +14,43 @@ Vault.prototype = {
     _getPath: function (url) {
         return this._dir + '/' + url.replace(/\//g, ':');
     },
+
     getThing: function (url) {
         if (this._manifest.hasOwnProperty(url)) {
             var data = fs.readFileSync(this._manifest[url], { encoding: 'utf8' });
             return Promise.resolve(data);
         } else {
             return request.getAsync(url).spread(function(response, body) {
-                this._manifest[url] = this._getPath(url);
-                saveManifest(this._manifest);
-                fs.writeFileSync(this._manifest[url], body);
+                this.storeThing(url, body);
                 return data;
             }.bind(this));
         }
+    },
+
+    storeThing: function (key, value) {
+        this._manifest[key] = this._getPath(key);
+        saveManifest(this._manifest);
+        fs.writeFileSync(this._manifest[key], value);
+        return 
+    },
+
+    getDocument: function (id) {
+        var data = fs.readFileSync(this._manifest[id], { encoding: 'utf8' });
+        return Promise.resolve(data);
+    },
+
+    storeDocument: function (data) {
+        var thisId = this._manifest.id;
+        this._manifest.id++;
+        this.storeThing(thisId, data);
     },
 };
 
 function loadManifest () {
     if (!fs.existsSync(MANIFEST))
-        return {};
+        return {
+            id: 0,
+        };
 
     return JSON.parse(fs.readFileSync(MANIFEST, { encoding: 'utf8' }));
 }
