@@ -7,6 +7,7 @@ var MANIFEST = 'vault/manifest.json';
 function Vault (dir) {
     this._manifest = loadManifest();
     this._dir = dir;
+    try { fs.mkdirSync(dir); } catch(e) { }
 }
 
 Vault.prototype = {
