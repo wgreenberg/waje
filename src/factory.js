@@ -1,10 +1,9 @@
+
 var EventEmitter = require('events').EventEmitter;
-var Vault = require('./vault.js');
 var WikipediaCSM = require('./csm/wikipedia.js');
 var Queue = require('./jobQueue.js');
 
 function Factory () {
-    this._vault = new Vault('vault');
     this.events = new EventEmitter();
 
     this._q = new Queue();
@@ -18,7 +17,7 @@ Factory.prototype = {
 
         switch (payload.source) {
             case 'wikipedia':
-                job = WikipediaCSM.fetch(payload, this._vault);
+                job = WikipediaCSM.fetch(payload);
                 break;
             default:
                 throw 'wtf is ' + payload.source;

@@ -1,10 +1,12 @@
+
 var EventEmitter = require('events').EventEmitter;
 var Url = require('url');
 var request = require('request');
 var Promise = require('bluebird');
 var Job = require('../job.js');
+var Cache = require('../cache.js');
 
-function getParsedHtml (url, vault) {
+function getParsedHtml (url) {
     var args = {
         'action': 'parse',
         'page': url.pathname.split('/')[2],
@@ -12,10 +14,10 @@ function getParsedHtml (url, vault) {
         'redirects': '',
     };
     var apiUrl = getApiUrl(url, args);
-    return vault.getThing(apiUrl);
+    return Cache.getThing(apiUrl);
 }
 
-function getArticleMetadata (url, vault) {
+function getArticleMetadata (url) {
     var args = {
         'action': 'query',
          'titles': url.pathname.split('/')[2],
@@ -27,10 +29,10 @@ function getArticleMetadata (url, vault) {
          'rvprop': 'timestamp'
     };
     var apiUrl = getApiUrl(url, args);
-    return vault.getThing(apiUrl);
+    return Cache.getThing(apiUrl);
 }
 
-function getImageInfo (url, vault) {
+function getImageInfo (url) {
     var args = {
         'action': 'query',
         'titles': url.pathname.split('/')[2],
@@ -42,7 +44,7 @@ function getImageInfo (url, vault) {
         'prop': 'imageinfo'
     };
     var apiUrl = getApiUrl(url, args);
-    return vault.getThing(apiUrl);
+    return Cache.getThing(apiUrl);
 }
 
 function getApiUrl (url, args) {
@@ -86,23 +88,23 @@ function getImageUrls (imageMetadata) {
 }
 
 module.exports = {
-    fetch: function (payload, vault) {
-        return new Job(this._getFetcher(payload, vault));
+    fetch: function (payload) {
+        return new Job(this._getFetcher(payload));
     },
 
-    _getFetcher: function (payload, vault) {
+    _getFetcher: function (payload) {
         return function (job) {
             var parsedUrl = Url.parse(payload.url);
 
-            var parsedHtml = getParsedHtml(parsedUrl, vault);
-            var imageMetadata = getImageInfo(parsedUrl, vault);
-            var articleMetadata = getArticleMetadata(parsedUrl, vault);
+            var parsedHtml = getParsedHtml(parsedUrl, Cache);
+            var imageMetadata = getImageInfo(parsedUrl, Cache);
+            var articleMetadata = getArticleMetadata(parsedUrl, Cache);
 
             var imageData = getImageUrls(imageMetadata)
             .then(function (imageUrls) {
                 var numFinished = 0;
                 return Promise.all(imageUrls.map(function (imageUrl) {
-                    return vault.getThing(imageUrl)
+                    return Cache.getThing(imageUrl)
                     .then(function () {
                         job.emit('progress', numFinished);
                         numFinished++;
