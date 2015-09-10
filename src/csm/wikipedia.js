@@ -91,7 +91,7 @@ module.exports = {
     },
 
     _getFetcher: function (payload, vault) {
-        return function (j) {
+        return function (job) {
             var parsedUrl = Url.parse(payload.url);
 
             var parsedHtml = getParsedHtml(parsedUrl, vault);
@@ -104,7 +104,7 @@ module.exports = {
                 return Promise.all(imageUrls.map(function (imageUrl) {
                     return vault.getThing(imageUrl)
                     .then(function () {
-                        j.emit('progress', numFinished);
+                        job.emit('progress', numFinished);
                         numFinished++;
                     });
                 }));
@@ -116,9 +116,9 @@ module.exports = {
                 articleMetadata,
                 imageData,
             ]).then(function (datums) {
-                j.emit('done');
+                job.emit('done');
             }, function (err) {
-                j.emit('error', err);
+                job.emit('error', err);
             });
         };
     },
