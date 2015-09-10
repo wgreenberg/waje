@@ -4,7 +4,6 @@ var Url = require('url');
 var request = require('request');
 var Promise = require('bluebird');
 
-var Job = require('../job.js');
 var Cache = require('../cache.js');
 
 function getParsedHtml (url) {
@@ -84,55 +83,46 @@ function getImages (imageMetadata) {
 }
 
 module.exports = {
-    fetch: function (payload) {
-        return new Job(this._getFetcher(payload));
-    },
+    fetch: function (job) {
+        var payload = job.payload;
 
-    _getFetcher: function (payload) {
         if (payload.wikipedia_type === 'image')
-            return this._getImageFetcher(payload);
+            return this._fetchImage(job);
         else // article
-            return this._getArticleFetcher(payload);
+            return this._fetchArticle(job);
     },
 
-    _getImageFetcher: function (payload) {
-        return function (job) {
-            var imageUrl = payload.wikipedia_imageinfo[0].url;
-            return Cache.getThing(imageUrl);
-        };
+    _fetchImage: function (job) {
+        var payload = job.payload;
+        var imageUrl = payload.wikipedia_imageinfo[0].url;
+        job.fromPromise(Cache.getThing(imageUrl));
     },
 
-    _getArticleFetcher: function (payload) {
-        return function (job) {
-            var factory = payload.factory;
+    _fetchArticle: function (job) {
+        var payload = job.payload;
+        var factory = job.factory;
+        var parsedUrl = Url.parse(payload.url);
 
-            var parsedUrl = Url.parse(payload.url);
+        var parsedHtml = getParsedHtml(parsedUrl, Cache);
+        var articleMetadata = getArticleMetadata(parsedUrl, Cache);
 
-            var parsedHtml = getParsedHtml(parsedUrl, Cache);
-            var articleMetadata = getArticleMetadata(parsedUrl, Cache);
+        var imageMetadata = getImageInfo(parsedUrl, Cache);
+        var imageData = getImages (imageMetadata).then(function (images) {
+            images.forEach(function(image) {
+                var payload = {
+                    source: 'wikipedia',
+                    wikipedia_type: 'image',
+                    wikipedia_imageinfo: image.imageinfo,
+                };
 
-            var imageMetadata = getImageInfo(parsedUrl, Cache);
-            var imageData = getImages (imageMetadata).then(function (images) {
-                images.forEach(function(image) {
-                    var payload = {
-                        source: 'wikipedia',
-                        wikipedia_type: 'image',
-                        wikipedia_imageinfo: image.imageinfo,
-                    };
-
-                    var imageJob = factory.fetch(payload);
-                    // XXX: Track dependencies somehow?
-                });
+                var imageJob = factory.fetch(payload);
+                // XXX: Track dependencies somehow?
             });
+        });
 
-            return Promise.all([
-                parsedHtml,
-                articleMetadata,
-            ]).then(function (datums) {
-                job.emit('done');
-            }, function (err) {
-                job.emit('error', err);
-            });
-        };
+        job.fromPromise(Promise.all([
+            parsedHtml,
+            articleMetadata,
+        ]));
     },
 };

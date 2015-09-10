@@ -3,64 +3,62 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var uuid = require('node-uuid');
 
-// runner :: Job -> Promise(Completed Job)
-function Job (runner) {
-    this._signals = ['done', 'progress'];
+var JobState = {
+    QUEUED: "queued",
+    RUNNING: "running",
+    COMPLETED: "completed",
+    ERROR: "error",
+};
+
+function Job (factory, payload) {
+    this._signals = ['statechange', 'progress', 'bulletin'];
     EventEmitter.call(this);
-    this._runner = runner || Promise.resolve;
-    this._started = false;
+
+    this.factory = factory;
+    this.payload = payload;
+
+    this.state = JobState.QUEUED;
+
     this.id = uuid.v1();
 }
-
 util.inherits(Job, EventEmitter);
 
-Job.prototype.start = function () {
-    var self = this;
-    if (self._started) {
-        return Promise.reject();
-    }
+Job.JobState = JobState;
 
-    self._started = true;
-    return self._runner(self)
-    .then(function (val) {
-        self.emit('done', val);
-        return val;
-    })
-    .catch(function (reason) {
-        self.emit('fail', reason);
-        throw reason;
-    });
-}
+Job.prototype._transition = function (from, to) {
+    if (this.state !== from)
+        throw new Error("Invalid state transition");
+
+    this.state = to;
+    this.emit('statechange', from, to);
+};
+
+Job.prototype.postBulletin = function (bulletin) {
+    this.emit('bulletin', bulletin);
+};
+Job.prototype.started = function () {
+    this._transition(JobState.QUEUED, JobState.RUNNING);
+};
+Job.prototype.done = function () {
+    this._transition(JobState.RUNNING, JobState.COMPLETED);
+};
+Job.prototype.fatalError = function (err) {
+    this._transition(JobState.RUNNING, JobState.ERROR);
+    this.postBulletin({ type: 'error', message: err.message, stack: err.stack });
+};
 
 Job.prototype.clone = function () {
-    return new Job(this._runner);
-}
+    return new Job(this.payload);
+};
+
+Job.prototype.fromPromise = function (p) {
+    var self = this;
+
+    p.then(function() {
+        self.done();
+    }, function(err) {
+        self.fatalError(err);
+    });
+};
 
 module.exports = Job;
-
-/*
-function timer (j) {
-    return new Promise.Promise(function (resolve, reject) {
-        setTimeout(function () {
-            j.emit('progress', 0);
-        }, 0);
-        setTimeout(function () {
-            j.emit('progress', .25);
-        }, 10);
-        setTimeout(function () {
-            j.emit('progress', .5);
-        }, 20);
-        setTimeout(function () {
-            j.emit('progress', .7);
-        }, 30);
-        setTimeout(function () {
-            resolve();
-        }, 40);
-    });
-}
-
-var a = new Job(timer);
-a.on('progress', function (amt) { console.log(amt) });
-a.on('done', function (amt) { console.log('done signal') });
-a.start().then(function () { console.log('its really done') });
-*/

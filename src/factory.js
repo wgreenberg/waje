@@ -1,41 +1,41 @@
 
 var EventEmitter = require('events').EventEmitter;
 var WikipediaCSM = require('./csm/wikipedia.js');
+var Job = require('./job.js');
 var Queue = require('./jobQueue.js');
 
 function Factory () {
     this.events = new EventEmitter();
-
-    this._q = new Queue();
+    // this._q = new Queue();
 }
 
 Factory.prototype = {
     fetch: function (payload) {
-        var job;
+        var job = new Job(this, payload);
 
-        this.events.emit('fetching', payload);
+        this.events.emit('new-job', job);
 
-        payload.factory = this;
+        // this._q.add(job);
+        this._runJob(job);
+    },
 
-        switch (payload.source) {
+    _runNextJob: function () {
+        // var job = this._q.pop();
+        // this._runJob(job);
+    },
+
+    _runJob: function (job) {
+        var payload = job.payload;
+
+        job.started();
+
+        switch (job.payload.source) {
             case 'wikipedia':
-                job = WikipediaCSM.fetch(payload);
+                WikipediaCSM.fetch(job);
                 break;
             default:
-                throw 'wtf is ' + payload.source;
+                throw 'wtf is ' + job.payload.source;
         }
-
-        job.on('progress', function (numFinished) {
-            this.events.emit('progress', payload, numFinished);
-        }.bind(this));
-        job.on('error', function (reason) {
-            this.events.emit('error', payload, reason);
-        }.bind(this));
-        job.on('done', function () {
-            this.events.emit('done', payload);
-        }.bind(this));
-
-        this._q.add(job);
     },
 };
 

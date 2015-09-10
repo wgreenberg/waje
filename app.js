@@ -1,16 +1,14 @@
 var Factory = require('./src/factory.js');
 
-Factory.events.on('fetching', function(payload) {
-    console.log('Fetching', payload);
-});
-Factory.events.on('progress', function(payload, numFinished) {
-    console.log('Progress', payload, numFinished);
-});
-Factory.events.on('done', function(payload) {
-    console.log('Finished', payload);
-});
-Factory.events.on('error', function(payload, reason) {
-    console.error('Error', payload, reason);
+Factory.events.on('new-job', function(job) {
+    console.log('Fetching', job);
+
+    job.on('statechange', function(from, to) {
+        console.log('state', from, to);
+    });
+    job.on('bulletin', function(bulletin) {
+        console.log('bulletin', bulletin);
+    });
 });
 Factory.fetch({
     url:'https://en.wikipedia.org/wiki/Cat',
