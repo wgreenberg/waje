@@ -1,19 +1,18 @@
 var Factory = require('./src/factory.js');
 
-var f = new Factory();
-f.events.on('fetching', function(payload) {
+Factory.events.on('fetching', function(payload) {
     console.log('Fetching', payload);
 });
-f.events.on('progress', function(payload, numFinished) {
+Factory.events.on('progress', function(payload, numFinished) {
     console.log('Progress', payload, numFinished);
 });
-f.events.on('done', function(payload) {
+Factory.events.on('done', function(payload) {
     console.log('Finished', payload);
 });
-f.events.on('error', function(payload, reason) {
+Factory.events.on('error', function(payload, reason) {
     console.error('Error', payload, reason);
 });
-f.fetch({
+Factory.fetch({
     url:'https://en.wikipedia.org/wiki/Cat',
     source:'wikipedia',
 });

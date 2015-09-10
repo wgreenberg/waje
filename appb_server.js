@@ -10,17 +10,16 @@ function dispatch(payload) {
     });
 }
 
-var f = new Factory();
-f.events.on('fetching', function(payload) {
+Factory.events.on('fetching', function(payload) {
     dispatch({ type: 'fetching', payload: payload });
 });
-f.events.on('progress', function(payload, numFinished) {
+Factory.events.on('progress', function(payload, numFinished) {
     dispatch({ type: 'progress', payload: payload, numFinished: numFinished });
 });
-f.events.on('error', function(payload, reason) {
+Factory.events.on('error', function(payload, reason) {
     dispatch({ type: 'error', payload: payload, reason: reason });
 });
-f.events.on('done', function(payload) {
+Factory.events.on('done', function(payload) {
     dispatch({ type: 'done', payload: payload });
 });
 
@@ -33,7 +32,7 @@ wss.on('connection', function(ws) {
         var msg = JSON.parse(msgS);
         switch (msg.type) {
         case 'fetch':
-            f.fetch(msg.payload);
+            Factory.fetch(msg.payload);
             break;
         }
     });
