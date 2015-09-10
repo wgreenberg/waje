@@ -15,6 +15,8 @@ Factory.prototype = {
 
         this.events.emit('fetching', payload);
 
+        payload.factory = this;
+
         switch (payload.source) {
             case 'wikipedia':
                 job = WikipediaCSM.fetch(payload);

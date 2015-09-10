@@ -3,6 +3,7 @@ var EventEmitter = require('events').EventEmitter;
 var Url = require('url');
 var request = require('request');
 var Promise = require('bluebird');
+
 var Job = require('../job.js');
 var Cache = require('../cache.js');
 
@@ -58,7 +59,7 @@ function getApiUrl (url, args) {
     });
 }
 
-function getImageUrls (imageMetadata) {
+function getImages (imageMetadata) {
     return imageMetadata
     .then(JSON.parse)
     .then(function (imageData) {
@@ -79,11 +80,6 @@ function getImageUrls (imageMetadata) {
             var imageinfo = image.imageinfo[0];
             return imageinfo.mediatype !== 'AUDIO' && imageinfo.mediatype !== 'VIDEO';
         });
-    })
-    .then(function (images) {
-        return images.map(function (image) {
-            return image.imageinfo[0].url;
-        });
     });
 }
 
@@ -93,30 +89,45 @@ module.exports = {
     },
 
     _getFetcher: function (payload) {
+        if (payload.wikipedia_type === 'image')
+            return this._getImageFetcher(payload);
+        else // article
+            return this._getArticleFetcher(payload);
+    },
+
+    _getImageFetcher: function (payload) {
         return function (job) {
+            var imageUrl = payload.wikipedia_imageinfo[0].url;
+            return Cache.getThing(imageUrl);
+        };
+    },
+
+    _getArticleFetcher: function (payload) {
+        return function (job) {
+            var factory = payload.factory;
+
             var parsedUrl = Url.parse(payload.url);
 
             var parsedHtml = getParsedHtml(parsedUrl, Cache);
-            var imageMetadata = getImageInfo(parsedUrl, Cache);
             var articleMetadata = getArticleMetadata(parsedUrl, Cache);
 
-            var imageData = getImageUrls(imageMetadata)
-            .then(function (imageUrls) {
-                var numFinished = 0;
-                return Promise.all(imageUrls.map(function (imageUrl) {
-                    return Cache.getThing(imageUrl)
-                    .then(function () {
-                        job.emit('progress', numFinished);
-                        numFinished++;
-                    });
-                }));
+            var imageMetadata = getImageInfo(parsedUrl, Cache);
+            var imageData = getImages (imageMetadata).then(function (images) {
+                images.forEach(function(image) {
+                    var payload = {
+                        source: 'wikipedia',
+                        wikipedia_type: 'image',
+                        wikipedia_imageinfo: image.imageinfo,
+                    };
+
+                    var imageJob = factory.fetch(payload);
+                    // XXX: Track dependencies somehow?
+                });
             });
 
             return Promise.all([
                 parsedHtml,
-                imageMetadata,
                 articleMetadata,
-                imageData,
             ]).then(function (datums) {
                 job.emit('done');
             }, function (err) {
