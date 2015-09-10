@@ -2,6 +2,7 @@ var EventEmitter = require('events').EventEmitter;
 var Url = require('url');
 var request = require('request');
 var Promise = require('bluebird');
+var Job = require('../job.js');
 
 function getParsedHtml (url, vault) {
     var args = {
@@ -86,37 +87,39 @@ function getImageUrls (imageMetadata) {
 
 module.exports = {
     fetch: function (payload, vault) {
-        var emitter = new EventEmitter();
+        return new Job(this._getFetcher(payload, vault));
+    },
 
-        var parsedUrl = Url.parse(payload.url);
+    _getFetcher: function (payload, vault) {
+        return function (j) {
+            var parsedUrl = Url.parse(payload.url);
 
-        var parsedHtml = getParsedHtml(parsedUrl, vault);
-        var imageMetadata = getImageInfo(parsedUrl, vault);
-        var articleMetadata = getArticleMetadata(parsedUrl, vault);
+            var parsedHtml = getParsedHtml(parsedUrl, vault);
+            var imageMetadata = getImageInfo(parsedUrl, vault);
+            var articleMetadata = getArticleMetadata(parsedUrl, vault);
 
-        var imageData = getImageUrls(imageMetadata)
-        .then(function (imageUrls) {
-            var numFinished = 0;
-            return Promise.all(imageUrls.map(function (imageUrl) {
-                return vault.getThing(imageUrl)
-                .then(function () {
-                    emitter.emit('progress', numFinished);
-                    numFinished++;
-                });
-            }));
-        });
+            var imageData = getImageUrls(imageMetadata)
+            .then(function (imageUrls) {
+                var numFinished = 0;
+                return Promise.all(imageUrls.map(function (imageUrl) {
+                    return vault.getThing(imageUrl)
+                    .then(function () {
+                        j.emit('progress', numFinished);
+                        numFinished++;
+                    });
+                }));
+            });
 
-        Promise.all([
-            parsedHtml,
-            imageMetadata,
-            articleMetadata,
-            imageData,
-        ]).then(function (datums) {
-            emitter.emit('done');
-        }, function (err) {
-            emitter.emit('error', err);
-        });
-
-        return emitter;
+            return Promise.all([
+                parsedHtml,
+                imageMetadata,
+                articleMetadata,
+                imageData,
+            ]).then(function (datums) {
+                j.emit('done');
+            }, function (err) {
+                j.emit('error', err);
+            });
+        };
     },
 };
