@@ -10,17 +10,16 @@ function dispatch(payload) {
     });
 }
 
-Factory.events.on('fetching', function(payload) {
-    dispatch({ type: 'fetching', payload: payload });
-});
-Factory.events.on('progress', function(payload, numFinished) {
-    dispatch({ type: 'progress', payload: payload, numFinished: numFinished });
-});
-Factory.events.on('error', function(payload, reason) {
-    dispatch({ type: 'error', payload: payload, reason: reason });
-});
-Factory.events.on('done', function(payload) {
-    dispatch({ type: 'done', payload: payload });
+Factory.events.on('new-job', function(job) {
+    dispatch({ type: 'fetching', payload: job.payload });
+
+    Factory.events.on('statechange', function(from, to) {
+        dispatch({ type: 'state', from: from, to: to });
+    });
+
+    Factory.events.on('bulletin', function(bulletin) {
+        dispatch({ type: 'bulletin', bulletin: bulletin });
+    });
 });
 
 var wss = new ws.Server({ port: 8080, path: '/control/' });
