@@ -4,6 +4,20 @@ var Promise = require('bluebird');
 
 var MANIFEST = 'vault/manifest.json';
 
+// Checks if the given path is up to date given the cache policy.
+function checkCachePolicy(path, cachePolicy) {
+    if (!cachePolicy)
+        return true;
+    if (cachePolicy.force)
+        return false;
+
+    var stats = fs.statSync(path);
+    if ((Date.now() - stats.mtime) < cachePolicy.mtimeDelta)
+        return true;
+
+    return false;
+}
+
 function Vault (dir) {
     this._manifest = loadManifest();
     this._dir = dir;
@@ -15,8 +29,9 @@ Vault.prototype = {
         return this._dir + '/' + key.replace(/\//g, ':');
     },
 
-    hasDocument: function (key) {
-        return !!this._manifest[key];
+    hasDocument: function (key, cachePolicy) {
+        var path = this._manifest[key];
+        return !!path && checkCachePolicy(path, cachePolicy);
     },
 
     getDocument: function (key) {
