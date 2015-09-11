@@ -11,6 +11,7 @@ function MessageHandler () {
 }
 _.extend(MessageHandler.prototype, {
     _msg_emitMessage: function(msg, client) {
+        msg.target = this.path;
         var clients = client ? [client] : this._subscriptions;
         clients.forEach(function(C) {
             C.send(msg);
@@ -21,6 +22,7 @@ _.extend(MessageHandler.prototype, {
     },
     _msg_handleMessage: function(msg, client) {
         var handler = this['_msg_handleMessage_' + msg.type];
+        console.log(this.constructor.name, '_msg_handleMessage_' + msg.type);
         if (!handler) return;
         handler.call(this, msg, client);
     },
@@ -83,39 +85,60 @@ _.extend(GenericHandler.prototype, {
 
 function FactoryHandler (factory) {
     MessageHandler.call(this);
-    this._factory = factory;
+    this.factory = factory;
+    this.path = '/Factory';
+
+    this._jobsRegistry = new JobsRegistry(this);
 }
 util.inherits(FactoryHandler, MessageHandler);
 _.extend(FactoryHandler.prototype, {
     _msg_lookupObject: function (objPath) {
-        if (objPath.slice(0, 4) == 'job_') {
-            var jobId = objPath.slice(4);
-            return this._factory.findJob(jobId).then(function(job) {
-                // XXX: This is ugly
-                if (!job._msgHandler) job._msgHandler = new JobHandler(job);
-                return job._msgHandler;
-            });
-        } else {
-            return null;
-        }
+        if (objPath == 'Job') return this._jobsRegistry;
+        return null;
     },
     _msg_handleMessage_Fetch: function (msg, client) {
-        this._factory.fetch(msg.payload).then(function(job) {
-            var jobPath = msg.target + '/job_' + job.id;
-            this._msg_emitMessage({ type: 'NewJob', jobPath: jobPath, target: msg.target }, client);
+        this.factory.fetch(msg.payload).then(function(job) {
+            var jobPath = this._jobsRegistry.getJobPath(job);
+            this._msg_emitMessage({ type: 'NewJob', jobPath: jobPath }, client);
         }.bind(this));
     }
 });
 
-function JobHandler (job) {
+function JobsRegistry (factoryHandler) {
+    MessageHandler.call(this);
+    this._factoryHandler = factoryHandler;
+    this.path = this._factoryHandler.path + '/Job';
+}
+util.inherits(JobsRegistry, MessageHandler);
+_.extend(JobsRegistry.prototype, {
+    getJobPath: function(job) {
+        return this.path + '/' + job.id;
+    },
+
+    _msg_lookupObject: function (objPath) {
+        var jobId = objPath;
+        return this._factoryHandler.factory.findJob(jobId).then(function(job) {
+            if (!job._msgHandler) job._msgHandler = new JobHandler(job, this);
+            return job._msgHandler;
+        }.bind(this));
+    },
+});
+
+function JobHandler (job, jobRegistry) {
     MessageHandler.call(this);
     this._job = job;
+    this._jobRegistry = jobRegistry;
+    this.path = this._jobRegistry.getJobPath(this._job);
     this._job.on('statechange', function(from, to) {
         this._msg_emitMessage({ type: 'StateChange', newState: to });
     }.bind(this));
     this._job.on('bulletin', function(bulletin) {
         this._msg_emitBulletin(bulletin);
-    });
+    }.bind(this));
+    this._job.on('new-child', function(job) {
+        var jobPath = this._jobRegistry.getJobPath(this._job);
+        this._msg_emitMessage({ type: 'NewJob', jobPath: jobPath }, client);
+    }.bind(this));
 }
 util.inherits(JobHandler, MessageHandler);
 _.extend(JobHandler.prototype, {
