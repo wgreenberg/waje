@@ -113,15 +113,30 @@ function JobHandler (job) {
     this._job.on('statechange', function(from, to) {
         this._msg_emitMessage({ type: 'StateChange', newState: to });
     }.bind(this));
-    this._job.on('bulletin', function() {
-        this._msg_emitMessage({ type: 'Bulletin', bulletin: bulletin });
+    this._job.on('bulletin', function(bulletin) {
+        this._msg_emitBulletin(bulletin);
     });
 }
 util.inherits(JobHandler, MessageHandler);
 _.extend(JobHandler.prototype, {
+    _msg_emitBulletin: function(bulletin) {
+        this._msg_emitMessage({ type: 'Bulletin', bulletin: bulletin });
+    },
     _msg_handleMessage_Sync: function(msg, client) {
         this._msg_emitMessage({ type: 'Payload', payload: this._job.payload });
         this._msg_emitMessage({ type: 'StateChange', newState: this._job.state });
+    },
+    _msg_handleMessage_GetBulletins: function(msg, client) {
+        // XXX
+        this._job.factory._jobStore.Bulletin.findAll({
+            where: {
+                jobId: this._job.jobId,
+            },
+        }).then(function(bulletins) {
+            bulletins.forEach(function(bulletin) {
+                this._msg_emitBulletin(bulletin);
+            }.bind(this));
+        }.bind(this));
     },
 });
 
