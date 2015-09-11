@@ -84,12 +84,15 @@ function getImages (imageMetadata) {
 
 module.exports = {
     fetch: function (job) {
-        var payload = job.payload;
+        var self = this;
+        job.catchErrors(function () {
+            var payload = job.payload;
 
-        if (payload.wikipedia_type === 'image')
-            return this._fetchImage(job);
-        else // article
-            return this._fetchArticle(job);
+            if (payload.wikipedia_type === 'image')
+                self._fetchImage(job);
+            else // article
+                self._fetchArticle(job);
+        });
     },
 
     _fetchImage: function (job) {
@@ -107,7 +110,8 @@ module.exports = {
         var articleMetadata = getArticleMetadata(parsedUrl, Cache);
 
         var imageMetadata = getImageInfo(parsedUrl, Cache);
-        var imageData = getImages (imageMetadata).then(function (images) {
+        var imageData = getImages(imageMetadata).then(function (images) {
+            job.debug('Going to fetch ' + images.length + ' images.');
             images.forEach(function(image) {
                 var payload = {
                     source: 'wikipedia',
@@ -116,7 +120,7 @@ module.exports = {
                 };
 
                 var imageJob = factory.fetch(payload);
-                // XXX: Track dependencies somehow?
+                job.emit('new-child', imageJob.id);
             });
         });
 

@@ -2,11 +2,9 @@
 var EventEmitter = require('events').EventEmitter;
 var WikipediaCSM = require('./csm/wikipedia.js');
 var Job = require('./job.js');
-var Queue = require('./jobQueue.js');
 
 function Factory () {
     this.events = new EventEmitter();
-    // this._q = new Queue();
 }
 
 Factory.prototype = {
@@ -15,8 +13,9 @@ Factory.prototype = {
 
         this.events.emit('new-job', job);
 
-        // this._q.add(job);
         this._runJob(job);
+        
+        return job;
     },
 
     _runNextJob: function () {

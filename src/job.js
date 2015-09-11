@@ -10,8 +10,14 @@ var JobState = {
     ERROR: "error",
 };
 
+var BulletinLevel = {
+    ERROR: 'error',
+    WARN: 'warn',
+    INFO: 'info',
+    DEBUG: 'debug',
+};
+
 function Job (factory, payload) {
-    this._signals = ['statechange', 'progress', 'bulletin'];
     EventEmitter.call(this);
 
     this.factory = factory;
@@ -44,11 +50,36 @@ Job.prototype.done = function () {
 };
 Job.prototype.fatalError = function (err) {
     this._transition(JobState.RUNNING, JobState.ERROR);
-    this.postBulletin({ type: 'error', message: err.message, stack: err.stack });
+    this.postBulletin({ type: BulletinLevel.ERROR, message: err.message, stack: err.stack });
 };
+Job.prototype.catchErrors = function (f) {
+    try {
+        f();
+    } catch (e) {
+        this.fatalError(e);
+    }
+};
+Job.prototype.info = function (message) {
+    this.postBulletin({
+        type: BulletinLevel.INFO,
+        message: message,
+    });
+}
+Job.prototype.warn = function (message) {
+    this.postBulletin({
+        type: BulletinLevel.WARN,
+        message: message,
+    });
+}
+Job.prototype.debug = function (message) {
+    this.postBulletin({
+        type: BulletinLevel.DEBUG,
+        message: message,
+    });
+}
 
 Job.prototype.clone = function () {
-    return new Job(this.payload);
+    return new Job(this.factory, this.payload);
 };
 
 Job.prototype.fromPromise = function (p) {
