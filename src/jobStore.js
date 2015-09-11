@@ -8,6 +8,7 @@ function JobStore (factory) {
     this._db = new Sequelize('database', 'foo', 'bar', {
         dialect: 'sqlite',
         storage: ':memory:', // FIXME store on disk
+        logging: null,
     });
 
     var jobReady = this._setupJobTable();
@@ -71,7 +72,9 @@ JobStore.prototype = {
     },
 
     findJob: function (jobId) {
-        return new Job(this.factory, jobId).then(Job.fromDBJob);
+        return this.Job.findById(jobId).then(function(dbJob) {
+            return Job.fromDBJob(this.factory, dbJob);
+        }.bind(this));
     },
 
     _addBulletin: function (job, bulletin) {

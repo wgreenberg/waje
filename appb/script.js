@@ -15,27 +15,82 @@
         dlog(JSON.stringify(j, null, 2));
     }
 
-    var control = newSocket('/control/');
-    control.onmessage = function(event) {
-        var msg = JSON.parse(event.data);
+    function Client(ws) {
+        this._ws = ws;
+        this._objects = {};
+
+        this._ws.onmessage = function(event) {
+            var msgS = event.data;
+            var msg = JSON.parse(msgS);
+            this._handleMessage(msg);
+        }.bind(this);
+    }
+    Client.prototype.registerObject = function(path, obj) {
+        this._objects[path] = obj;
+    };
+    Client.prototype._handleMessage = function(msg) {
         jlog(['ws recv', msg]);
+
+        var obj = this._objects[msg.target];
+        if (!obj) return;
+
+        obj._msg_handleMessage(msg);
+    };
+    Client.prototype.sendMessage = function(msg) {
+        jlog(['ws send', msg]);
+
+        this._ws.send(JSON.stringify(msg));
     };
 
-    function sendmsg(msg) {
-        jlog(['ws send', msg]);
-        control.send(JSON.stringify(msg, null, 2));
+    function MessageHandler(client, path) {
+        this._client = client;
+        this.path = path;
+        this._client.registerObject(this.path, this);
     }
-    function fetch(url) {
-        jlog(['ui fetch', url]);
-        sendmsg({ type: 'fetch', payload: {
-            url: url,
-            source:'wikipedia',
-        }});
+    MessageHandler.prototype._msg_emitMessage = function(msg) {
+        msg.target = this.path;
+        this._client.sendMessage(msg);
+    };
+    MessageHandler.prototype.subscribe = function() {
+        this._msg_emitMessage({ type: 'Subscribe' });
+    };
+    MessageHandler.prototype._msg_handleMessage = function(msg) {
+        var handler = this['_msg_handleMessage_' + msg.type];
+        if (!handler) return;
+        handler(msg);
+    };
+
+    function Job(client, path) {
+        MessageHandler.call(this, client, path);
     }
+    Job.prototype = Object.create(MessageHandler.prototype);
+    Job.prototype._msg_handleMessage_Payload = function(msg) {
+        jlog(['pl', msg]);
+    };
+
+    function Factory(client, path) {
+        MessageHandler.call(this, client, path);
+    }
+    Factory.prototype = Object.create(MessageHandler.prototype);
+    Factory.prototype._msg_handleMessage_NewJob = function(msg) {
+        var job = new Job(client, msg.jobPath);
+        job.subscribe();
+    };
+    Factory.prototype.fetch = function(payload) {
+        this._msg_emitMessage({ type: 'Fetch', payload: payload });
+    };
+
+    var control = newSocket('/control/');
+    var client = new Client(control);
+
+    var factory = new Factory(client, '/Factory');
 
     document.querySelector('#submit').onclick = function() {
         var url = document.querySelector('#article_id').value;
-        fetch(url);
+        factory.fetch({
+            source: 'wikipedia',
+            url: url,
+        });
     };
 
 })(window);

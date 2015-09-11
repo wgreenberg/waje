@@ -1,3 +1,4 @@
+
 var Promise = require('bluebird');
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
@@ -34,7 +35,7 @@ Job.fromDBJob = function (factory, dbJob) {
     EventEmitter.call(job);
     job.factory = factory;
     job.id = dbJob.id;
-    job.payload = dbJob.factory;
+    job.payload = dbJob.payload;
     job.state = dbJob.state;
     return job;
 };
