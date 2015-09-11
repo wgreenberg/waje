@@ -1,7 +1,7 @@
 var Factory = require('./src/factory.js');
 
 Factory.events.on('new-job', function(job) {
-    console.log('Fetching', job);
+    console.log('Fetching', job.id);
 
     job.on('statechange', function(from, to) {
         console.log('state', from, to);

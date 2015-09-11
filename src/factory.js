@@ -2,6 +2,7 @@
 var EventEmitter = require('events').EventEmitter;
 var WikipediaCSM = require('./csm/wikipedia.js');
 var Job = require('./job.js');
+var JobStore = require('./jobStore.js');
 
 function Factory () {
     this.events = new EventEmitter();
@@ -9,13 +10,15 @@ function Factory () {
 
 Factory.prototype = {
     fetch: function (payload) {
-        var job = new Job(this, payload);
+        var self = this;
+        var job = new Job(self, payload);
+        return JobStore.register(job).then(function () {
+            self.events.emit('new-job', job);
 
-        this.events.emit('new-job', job);
-
-        this._runJob(job);
-        
-        return job;
+            self._runJob(job);
+            
+            return job;
+        });
     },
 
     _runNextJob: function () {

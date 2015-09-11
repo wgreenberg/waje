@@ -119,8 +119,9 @@ module.exports = {
                     wikipedia_imageinfo: image.imageinfo,
                 };
 
-                var imageJob = factory.fetch(payload);
-                job.emit('new-child', imageJob.id);
+                factory.fetch(payload).then(function (imageJob) {
+                    job.emit('new-child', imageJob.id);
+                });
             });
         });
 

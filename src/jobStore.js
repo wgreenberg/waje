@@ -45,18 +45,12 @@ JobStore.prototype = {
     register: function (job) {
         var self = this;
         return self._inited.then(function () {
-            return self.Job.findOrCreate({
-                where: {
-                    id: job.id,
-                },
-                defaults: {
-                    payload: job.payload || '',
-                },
-            })
-            .spread(function (dbJob, created) {
-                job.on('bulletin', function (bulletin) {
-                    self._addBulletin(job, bulletin);
-                });
+            job.on('bulletin', function (bulletin) {
+                self._addBulletin(job, bulletin);
+            });
+            return self.Job.create({
+                id: job.id,
+                payload: JSON.stringify(job.payload) || '',
             });
         });
     },
@@ -84,4 +78,4 @@ store.register(job).then(function () {;
 });
 */
 
-module.exports = JobStore;
+module.exports = new JobStore();
