@@ -51,6 +51,7 @@ Job.prototype._transition = function (from, to) {
 };
 
 Job.prototype.postBulletin = function (bulletin) {
+    console.log('Job ' + this.id + ' posted bulletin:', bulletin);
     this.emit('bulletin', bulletin);
 };
 Job.prototype.started = function () {
