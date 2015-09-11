@@ -11,13 +11,12 @@ function Factory () {
 
 Factory.prototype = {
     fetch: function (payload) {
-        var self = this;
-        var job = new Job(self, payload);
+        var job = new Job(this, payload);
         return this._jobStore.register(job).then(function () {
-            self.events.emit('new-job', job);
-            self._runJob(job);
+            this.events.emit('new-job', job);
+            this._runJob(job);
             return job;
-        });
+        }.bind(this));
     },
 
     _runNextJob: function () {
