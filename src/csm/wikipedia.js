@@ -98,7 +98,7 @@ module.exports = {
     _fetchImage: function (job) {
         var payload = job.payload;
         var imageUrl = payload.wikipedia_imageinfo[0].url;
-        job.fromPromise(Cache.getThing(imageUrl));
+        job.attachPromise(Cache.getThing(imageUrl));
     },
 
     _fetchArticle: function (job) {
@@ -125,7 +125,7 @@ module.exports = {
             });
         });
 
-        job.fromPromise(Promise.all([
+        job.attachPromise(Promise.all([
             parsedHtml,
             articleMetadata,
         ]));

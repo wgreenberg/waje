@@ -93,7 +93,7 @@ Job.prototype.clone = function () {
     return new Job(this.factory, this.payload);
 };
 
-Job.prototype.fromPromise = function (p) {
+Job.prototype.attachPromise = function (p) {
     var self = this;
 
     p.then(function() {
