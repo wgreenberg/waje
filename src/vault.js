@@ -2,8 +2,6 @@
 var fs = require('fs');
 var Promise = require('bluebird');
 
-var MANIFEST = 'vault/manifest.json';
-
 // Checks if the given path is up to date given the cache policy.
 function checkCachePolicy(path, cachePolicy) {
     if (!cachePolicy)
@@ -18,13 +16,28 @@ function checkCachePolicy(path, cachePolicy) {
     return false;
 }
 
+var MANIFEST = '_manifest.json';
+
 function Vault (dir) {
-    this._manifest = loadManifest();
     this._dir = dir;
-    try { fs.mkdirSync(dir); } catch(e) { }
+    try { fs.mkdirSync(this._dir); } catch(e) { }
+
+    this._manifestPath = this._dir + '/' + MANIFEST;
+    this._loadManifest();
 }
 
 Vault.prototype = {
+    _loadManifest: function () {
+        if (fs.existsSync(this._manifestPath))
+            this._manifest = JSON.parse(fs.readFileSync(this._manifestPath, { encoding: 'utf8' }));
+        else
+            this._manifest = {};
+    },
+    _saveManifest: function () {
+        var data = JSON.stringify(this._manifest, null, 2);
+        return fs.writeFileSync(this._manifestPath, data, { encoding: 'utf8' });
+    },
+
     _getPath: function (key) {
         return this._dir + '/' + key.replace(/\//g, ':');
     },
@@ -41,20 +54,9 @@ Vault.prototype = {
 
     storeDocument: function (key, value) {
         this._manifest[key] = this._getPath(key);
-        saveManifest(this._manifest);
+        this._saveManifest();
         fs.writeFileSync(this._manifest[key], value);
     },
 };
-
-function loadManifest () {
-    if (!fs.existsSync(MANIFEST))
-        return {};
-
-    return JSON.parse(fs.readFileSync(MANIFEST, { encoding: 'utf8' }));
-}
-
-function saveManifest (newManifest) {
-    return fs.writeFileSync(MANIFEST, JSON.stringify(newManifest, null, 2), { encoding: 'utf8' });
-}
 
 module.exports = new Vault('vault');
