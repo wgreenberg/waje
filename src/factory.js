@@ -15,9 +15,7 @@ Factory.prototype = {
         var job = new Job(self, payload);
         return this._jobStore.register(job).then(function () {
             self.events.emit('new-job', job);
-
             self._runJob(job);
-            
             return job;
         });
     },
