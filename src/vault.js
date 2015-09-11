@@ -1,6 +1,6 @@
 
-var fs = require('fs');
 var Promise = require('bluebird');
+var fs = Promise.promisifyAll(require('fs'));
 
 // Checks if the given path is up to date given the cache policy.
 function checkCachePolicy(path, cachePolicy) {
@@ -48,8 +48,7 @@ Vault.prototype = {
     },
 
     getDocument: function (key) {
-        var data = fs.readFileSync(this._manifest[key], { encoding: 'utf8' });
-        return Promise.resolve(data);
+        return fs.readFileAsync(this._manifest[key], { encoding: 'utf8' });
     },
 
     storeDocument: function (key, value) {
