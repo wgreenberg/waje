@@ -24,24 +24,16 @@ Vault.prototype = {
         return Promise.resolve(data);
     },
 
-    storeThing: function (key, value) {
+    storeDocument: function (key, value) {
         this._manifest[key] = this._getPath(key);
         saveManifest(this._manifest);
         fs.writeFileSync(this._manifest[key], value);
-    },
-
-    storeDocument: function (data) {
-        var thisId = this._manifest.id;
-        this._manifest.id++;
-        this.storeThing(thisId, data);
     },
 };
 
 function loadManifest () {
     if (!fs.existsSync(MANIFEST))
-        return {
-            id: 0,
-        };
+        return {};
 
     return JSON.parse(fs.readFileSync(MANIFEST, { encoding: 'utf8' }));
 }

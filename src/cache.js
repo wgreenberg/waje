@@ -8,7 +8,7 @@ exports.getThing = function (url) {
         return Vault.getDocument(url);
     } else {
         return request.getAsync(url).spread(function(response, body) {
-            Vault.storeThing(url, body);
+            Vault.storeDocument(url, body);
             return body;
         }.bind(this));
     }
