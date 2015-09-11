@@ -29,6 +29,16 @@ function Job (factory, payload) {
 }
 util.inherits(Job, EventEmitter);
 
+Job.fromDBJob = function (factory, dbJob) {
+    var job = Object.create(Job.prototype);
+    EventEmitter.call(job);
+    job.factory = factory;
+    job.id = dbJob.id;
+    job.payload = dbJob.factory;
+    job.state = dbJob.state;
+    return job;
+};
+
 Job.JobState = JobState;
 
 Job.prototype._transition = function (from, to) {

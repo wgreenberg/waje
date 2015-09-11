@@ -6,13 +6,14 @@ var JobStore = require('./jobStore.js');
 
 function Factory () {
     this.events = new EventEmitter();
+    this._jobStore = new JobStore(this);
 }
 
 Factory.prototype = {
     fetch: function (payload) {
         var self = this;
         var job = new Job(self, payload);
-        return JobStore.register(job).then(function () {
+        return this._jobStore.register(job).then(function () {
             self.events.emit('new-job', job);
 
             self._runJob(job);

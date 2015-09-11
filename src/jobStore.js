@@ -2,7 +2,9 @@ var Sequelize = require('sequelize');
 var Promise = require('bluebird');
 var Job = require('./job');
 
-function JobStore () {
+function JobStore (factory) {
+    this.factory = factory;
+
     this._db = new Sequelize('database', 'foo', 'bar', {
         dialect: 'sqlite',
         storage: ':memory:', // FIXME store on disk
@@ -21,6 +23,9 @@ JobStore.prototype = {
             id: {
                 type: Sequelize.STRING,
                 primaryKey: true,
+            },
+            state: {
+                type: Sequelize.STRING,
             },
             payload: {
                 type: Sequelize.STRING,
@@ -50,9 +55,23 @@ JobStore.prototype = {
             });
             return self.Job.create({
                 id: job.id,
+                state: job.state,
                 payload: JSON.stringify(job.payload) || '',
+            })
+            .then(function(dbJob) {
+                dbJob.state = job.state;
+                dbJob.save();
+
+                job.on('statechange', function (from, to) {
+                    dbJob.state = to;
+                    dbJob.save();
+                });
             });
         });
+    },
+
+    findJob: function (jobId) {
+        return new Job(this.factory, jobId).then(Job.fromDBJob);
     },
 
     _addBulletin: function (job, bulletin) {
@@ -78,4 +97,4 @@ store.register(job).then(function () {;
 });
 */
 
-module.exports = new JobStore();
+module.exports = JobStore;
